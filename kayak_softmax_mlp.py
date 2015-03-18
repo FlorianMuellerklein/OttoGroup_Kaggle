@@ -1,18 +1,30 @@
 import kayak
 import numpy as np
+import scipy as sp
 import pandas as pd
 from sklearn.utils import shuffle
-from sklearn.preprocessing import LabelBinarizer
+
+from sklearn.preprocessing import LabelBinarizer, StandardScaler
 from sklearn import ensemble, feature_extraction, preprocessing
+from sklearn.cross_validation import train_test_split
 
 batch_size     = 256
 learn_rate     = 0.005
 momentum       = 0.9
-layer1_size    = 2000
-layer2_size    = 1000
-layer1_dropout = 0.25
-layer2_dropout = 0.25
-iterations     = 100
+layer1_size    = 512
+layer2_size    = 512
+layer1_dropout = 0.5
+layer2_dropout = 0.5
+iterations     = 50
+
+# multiclass loss used for cross evaluation
+def llfun(act, pred):
+    epsilon = 1e-15
+    pred = sp.maximum(epsilon, pred)
+    pred = sp.minimum(1-epsilon, pred)
+    ll = sum(act*sp.log(pred) + sp.subtract(1,act)*sp.log(sp.subtract(1,pred)))
+    ll = ll * -1.0/len(act)
+    return ll
 
 def kayak_mlp(X, y):
     """
@@ -134,33 +146,47 @@ def main():
     # drop ids and get labels
     labels = train.target.values
     print labels
-    train = train.drop('id', axis=1)
-    train = train.drop('target', axis=1)
-    test = test.drop('id', axis=1)
+    train = train.drop('id', axis = 1)
+    train = train.drop('target', axis = 1)
+    test = test.drop('id', axis = 1)
 
     # transform counts to TFIDF features
-    tfidf = feature_extraction.text.TfidfTransformer()
-    train = tfidf.fit_transform(train).toarray()
-    test = tfidf.transform(test).toarray()
+    scaler = StandardScaler()
+    train = scaler.fit_transform(train)
+    test = scaler.transform(test)
     
     # encode labels 
     lbl_enc = preprocessing.LabelBinarizer()
     labels = lbl_enc.fit_transform(labels)
-    print labels
     
     train, labels = shuffle(train, labels)
-
-    pred_func = kayak_mlp(train, labels)
     
+    # split dataset for cross eval if we are doing it
+    x_train, x_test, y_train, y_test = train_test_split(train, labels)
+
+    pred_func = kayak_mlp(x_train, y_train)
+    
+    # ------------------ actual predictions  ----------------------------------
     # Make predictions on the test data.
-    preds = np.array(pred_func(test))
+    #preds = np.array(pred_func(test))
 
     # How did we do?
-    print preds[1]
+    #print preds[1]
     
     # create submission file
-    preds = pd.DataFrame(preds, index=sample.id.values, columns=sample.columns[1:])
-    preds.to_csv('kayak_softmax_mlp_preds.csv', index_label='id')
+    #preds = pd.DataFrame(preds, index=sample.id.values, columns = sample.columns[1:])
+    #preds.to_csv('kayak_softmax_mlp_preds.csv', index_label='id')
+    
+    # ------------------- cross eval ------------------------------------------
+    
+    preds = np.array(pred_func(x_test))
+    
+    scores = []
+    for index in range(0, len(pred)):
+        result = llfun(act[index], pred[index])
+        scores.append(result)
+
+    print(sum(scores) / len(scores)) 
     
 if __name__ == '__main__':
     main()

@@ -6,8 +6,19 @@ __author__ : Abhishek Thakur
 """
 
 import pandas as pd
+import scipy as sp
 import numpy as np
+from __future__ import division
 from sklearn import ensemble, feature_extraction, preprocessing
+
+# multiclass loss
+def llfun(act, pred):
+    epsilon = 1e-15
+    pred = sp.maximum(epsilon, pred)
+    pred = sp.minimum(1-epsilon, pred)
+    ll = sum(act*sp.log(pred) + sp.subtract(1,act)*sp.log(sp.subtract(1,pred)))
+    ll = ll * -1.0/len(act)
+    return ll
 
 # import data
 train = pd.read_csv('Data/train.csv')
@@ -36,6 +47,15 @@ clf.fit(train, labels)
 # predict on test set
 preds = clf.predict_proba(test)
 
-# create submission file
-preds = pd.DataFrame(preds, index=sample.id.values, columns=sample.columns[1:])
-preds.to_csv('benchmark.csv', index_label='id')
+# ----------------------  create submission file  -----------------------------
+#preds = pd.DataFrame(preds, index=sample.id.values, columns=sample.columns[1:])
+#preds.to_csv('benchmark.csv', index_label='id')
+
+# ----------------------  cross eval  -----------------------------------------
+
+    scores = []
+    for index in range(0, len(pred)):
+        result = llfun(act[index], pred[index])
+        scores.append(result)
+
+    print(sum(scores) / len(scores)) 
