@@ -69,11 +69,11 @@ def kayak_mlp(X, y):
     out = kayak.ElemAdd(kayak.MatMult(hidden_2_out, weights_out), bias_out)
     
     # apply activation function to output
-    yhat = kayak.LogSoftMax(out)
+    yhat = kayak.SoftMax(out)
     
     # ----------------------------- loss function -----------------------------------
     
-    loss = kayak.MatSum(kayak.LogMultinomialLoss(yhat, T))
+    loss = kayak.MatSum(kayak.L2Loss(yhat, T))
 
     # Use momentum for the gradient-based optimization.
     mom_grad_W1 = np.zeros(weights_1.shape)
@@ -119,7 +119,7 @@ def kayak_mlp(X, y):
     def compute_predictions(x):
         X.data = x
         batcher.test_mode()
-        return out.value
+        return yhat.value
 
     return compute_predictions
         
