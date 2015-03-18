@@ -9,6 +9,7 @@ import pandas as pd
 import scipy as sp
 import numpy as np
 from __future__ import division
+from sklearn.cross_validation import train_test_split
 from sklearn import ensemble, feature_extraction, preprocessing
 
 # multiclass loss
@@ -40,12 +41,15 @@ test = tfidf.transform(test).toarray()
 lbl_enc = preprocessing.LabelEncoder()
 labels = lbl_enc.fit_transform(labels)
 
+# set up datasets for cross eval
+x_train, x_test, y_train, y_test = train_test_split(train, labels)
+
 # train a random forest classifier
 clf = ensemble.RandomForestClassifier(n_estimators = 200, verbose = 1)
-clf.fit(train, labels)
+clf.fit(x_train, y_train)
 
 # predict on test set
-preds = clf.predict_proba(test)
+preds = clf.predict_proba(x_test)
 
 # ----------------------  create submission file  -----------------------------
 #preds = pd.DataFrame(preds, index=sample.id.values, columns=sample.columns[1:])
@@ -55,7 +59,7 @@ preds = clf.predict_proba(test)
 
     scores = []
     for index in range(0, len(pred)):
-        result = llfun(act[index], pred[index])
+        result = llfun(y_test[index], preds[index])
         scores.append(result)
 
     print(sum(scores) / len(scores)) 

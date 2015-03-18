@@ -183,7 +183,7 @@ def main():
     
     scores = []
     for index in range(0, len(pred)):
-        result = llfun(act[index], pred[index])
+        result = llfun(y_test[index], preds[index])
         scores.append(result)
 
     print(sum(scores) / len(scores)) 
