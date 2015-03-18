@@ -150,7 +150,7 @@ def main():
     train = train.drop('target', axis = 1)
     test = test.drop('id', axis = 1)
 
-    # transform counts to TFIDF features
+    # scale features
     scaler = StandardScaler()
     train = scaler.fit_transform(train)
     test = scaler.transform(test)
@@ -182,7 +182,7 @@ def main():
     preds = np.array(pred_func(x_test))
     
     scores = []
-    for index in range(0, len(pred)):
+    for index in range(0, len(preds)):
         result = llfun(y_test[index], preds[index])
         scores.append(result)
 

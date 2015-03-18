@@ -1,15 +1,10 @@
-"""
-Beating the benchmark 
-Otto Group product classification challenge @ Kaggle
-
-__author__ : Abhishek Thakur
-"""
 
 import pandas as pd
 import scipy as sp
 import numpy as np
+from sklearn.preprocessing import LabelEncoder, StandardScaler, LabelBinarizer
 from sklearn.cross_validation import train_test_split
-from sklearn import ensemble, feature_extraction, preprocessing
+from sklearn.linear_model import LogisticRegression
 
 # multiclass loss
 def llfun(act, pred):
@@ -31,22 +26,22 @@ train = train.drop('id', axis=1)
 train = train.drop('target', axis=1)
 test = test.drop('id', axis=1)
 
-# transform counts to TFIDF features
-tfidf = feature_extraction.text.TfidfTransformer()
-train = tfidf.fit_transform(train).toarray()
-test = tfidf.transform(test).toarray()
+# scale features
+scaler = StandardScaler()
+train = scaler.fit_transform(train)
+test = scaler.transform(test)
 
 # encode labels 
-lbl_enc = preprocessing.LabelEncoder()
+lbl_enc = LabelEncoder()
 labels = lbl_enc.fit_transform(labels)
 
 # set up datasets for cross eval
 x_train, x_test, y_train, y_test = train_test_split(train, labels)
-label_binary = preprocessing.LabelBinarizer()
+label_binary = LabelBinarizer()
 y_test = label_binary.fit_transform(y_test)
 
 # train a random forest classifier
-clf = ensemble.RandomForestClassifier(n_estimators = 200, verbose = 1)
+clf = LogisticRegression()
 clf.fit(x_train, y_train)
 
 # predict on test set
