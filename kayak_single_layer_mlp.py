@@ -13,12 +13,9 @@ from sklearn.cross_validation import train_test_split
 batch_size     = 256
 learn_rate     = 0.001
 momentum       = 0.9
-layer1_size    = 512
-layer2_size    = 256
-layer1_dropout = 0.05
-layer2_dropout = 0.05
-layer1_l2      = 0.0001
-layer2_l2      = 0.001
+layer1_size    = 256
+layer1_dropout = 0.01
+layer1_l2      = 0.01
 iterations     = 50
 
 # multiclass loss used for cross evaluation
@@ -80,42 +77,25 @@ def kayak_mlp(X, y):
     hidden_1_out = kayak.Dropout(hidden_1_activation, layer1_dropout, batcher = batcher)
     
     
-    # ----------------------------- second hidden layer -----------------------------
-    
-    # set up weights
-    weights_2 = kayak.Parameter(0.1 * np.random.randn(layer1_size, layer2_size))
-    bias_2 = kayak.Parameter(0.1 * np.random.randn(1, layer2_size))
-    
-    # linear combination of weights and layer1 output
-    hidden_2_input = kayak.ElemAdd(kayak.MatMult(hidden_1_out, weights_2), bias_2)
-    
-    # apply activation function to hidden layer
-    hidden_2_activation = kayak.HardReLU(hidden_2_input)
-    
-    # apply a dropout for regularization
-    hidden_2_out = kayak.Dropout(hidden_2_activation, layer2_dropout, batcher = batcher)
-    
     # ----------------------------- output layer -----------------------------------
     
-    weights_out = kayak.Parameter(0.1 * np.random.randn(layer2_size, 9))
+    weights_out = kayak.Parameter(0.1 * np.random.randn(layer1_size, 9))
     bias_out = kayak.Parameter(0.1 * np.random.randn(1, 9))
     
     # linear combination of layer2 output and output weights
-    out = kayak.ElemAdd(kayak.MatMult(hidden_2_out, weights_out), bias_out)
+    out = kayak.ElemAdd(kayak.MatMult(hidden_1_out, weights_out), bias_out)
     
     # apply activation function to output
-    yhat = kayak.Logistic(out)
+    yhat = kayak.SoftMax(out)
     
     # ----------------------------- loss function -----------------------------------
     
     loss = kayak.MatAdd(kayak.MatSum(kayak.L2Loss(yhat, T)),
-                        kayak.L2Norm(weights_1, layer1_l2),
-                        kayak.L2Norm(weights_2, layer2_l2))
+                        kayak.L2Norm(weights_1, layer1_l2))
 
     # Use momentum for the gradient-based optimization.
     mom_grad_W1 = np.zeros(weights_1.shape)
-    mom_grad_W2 = np.zeros(weights_2.shape)
-    mom_grad_W3 = np.zeros(weights_out.shape)
+    mom_grad_W2 = np.zeros(weights_out.shape)
     
     # Loop over epochs.
     plot_loss = np.ones((iterations, 2))
@@ -134,23 +114,18 @@ def kayak_mlp(X, y):
             # learn here.
             grad_W1 = loss.grad(weights_1)
             grad_B1 = loss.grad(bias_1)
-            grad_W2 = loss.grad(weights_2)
-            grad_B2 = loss.grad(bias_2)
-            grad_W3 = loss.grad(weights_out)
-            grad_B3 = loss.grad(bias_out)
+            grad_W2 = loss.grad(weights_out)
+            grad_B2 = loss.grad(bias_out)
         
             # Use momentum on the weight gradients.
             mom_grad_W1 = momentum * mom_grad_W1 + (1.0 - momentum) * grad_W1
             mom_grad_W2 = momentum * mom_grad_W2 + (1.0 - momentum) * grad_W2
-            mom_grad_W3 = momentum * mom_grad_W3 + (1.0 - momentum) * grad_W3
 
             # Now make the actual parameter updates.
             weights_1.value   -= learn_rate * mom_grad_W1
             bias_1.value      -= learn_rate * grad_B1
-            weights_2.value   -= learn_rate * mom_grad_W2
-            bias_2.value      -= learn_rate * grad_B2
-            weights_out.value -= learn_rate * mom_grad_W3
-            bias_out.value    -= learn_rate * grad_B3
+            weights_out.value -= learn_rate * mom_grad_W2
+            bias_out.value    -= learn_rate * grad_B2
         
         # save values into table to print learning curve at the end of trianing
         plot_loss[epoch, 0] = epoch
@@ -186,8 +161,8 @@ def main():
 
     # scale features
     scaler = StandardScaler()
-    scaler.fit(np.vstack((train.astype(float),test.astype(float))))
-    train = scaler.transform(train.astype(float))
+    #scaler.fit(np.vstack((train,test)))
+    train = scaler.fit_transform(train.astype(float))
     test = scaler.transform(test.astype(float))
     
     # encode labels 
@@ -215,7 +190,7 @@ def main():
     # ------------------- cross eval ------------------------------------------
     
     preds = np.array(pred_func(x_test))
-    
+
     y_test = lbl_enc.inverse_transform(y_test)
     y_test = LabelEncoder().fit_transform(y_test)
     

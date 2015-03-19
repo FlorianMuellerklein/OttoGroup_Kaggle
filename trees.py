@@ -1,11 +1,13 @@
+"""
+Based on Abhishek Thakur's BTB script
+"""
 
 import pandas as pd
 import scipy as sp
 import numpy as np
-from sklearn.preprocessing import LabelEncoder, StandardScaler, LabelBinarizer
+from sklearn.cluster import KMeans
 from sklearn.cross_validation import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomTreesEmbedding
+from sklearn import ensemble, feature_extraction, preprocessing
 
 # multiclass loss
 def MultiLogLoss(y_true, y_pred, eps = 1e-15):
@@ -46,35 +48,36 @@ train = train.drop('id', axis=1)
 train = train.drop('target', axis=1)
 test = test.drop('id', axis=1)
 
-# scale features
-scaler = StandardScaler()
-train = scaler.fit_transform(train.astype(float))
-test = scaler.transform(test.astype(float))
-
-# random trees embedding
-rte = RandomTreesEmbedding(n_estimators = 50, verbose = 1)
-rte.fit(train)
-tran = rte.apply(train)
+# transform counts to TFIDF features
+tfidf = feature_extraction.text.TfidfTransformer()
+train = tfidf.fit_transform(train).toarray()
+test = tfidf.transform(test).toarray()
 
 # encode labels 
-lbl_enc = LabelEncoder()
+lbl_enc = preprocessing.LabelEncoder()
 labels = lbl_enc.fit_transform(labels)
+
+# generate and add clustering features
+kmean = KMeans(n_clusters = 9, verbose = 1)
+clusters = kmean.fit_transform(train)
+train = np.hstack((train, clusters))
 
 # set up datasets for cross eval
 x_train, x_test, y_train, y_test = train_test_split(train, labels)
-#label_binary = LabelBinarizer()
-#y_test = label_binary.fit_transform(y_test)
+#label_binary = preprocessing.LabelBinarizer()
+#label_binary.fit(y_test)
 
 # train a random forest classifier
-clf = LogisticRegression()
+clf = ensemble.GradientBoostingClassifier(n_estimators = 500, verbose = 1)
 clf.fit(x_train, y_train)
 
 # predict on test set
+#preds_cv = clf.predict_proba(x_test)
 preds = clf.predict_proba(x_test)
 
 # ----------------------  create submission file  -----------------------------
-#preds = pd.DataFrame(preds, index=sample.id.values, columns=sample.columns[1:])
-#preds.to_csv('Preds/logit.csv', index_label='id')
+#preds = pd.DataFrame(preds, index = sample.id.values, columns = sample.columns[1:])
+#preds.to_csv('Preds/boostedtrees.csv', index_label = 'id')
 
 # ----------------------  cross eval  -----------------------------------------
 
