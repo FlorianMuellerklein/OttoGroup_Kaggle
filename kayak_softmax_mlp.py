@@ -6,6 +6,7 @@ import pandas as pd
 from matplotlib import pyplot
 
 from sklearn.utils import shuffle
+from sklearn.cluster import KMeans
 from sklearn.preprocessing import LabelBinarizer, StandardScaler, LabelEncoder
 from sklearn import ensemble, feature_extraction, preprocessing
 from sklearn.cross_validation import train_test_split
@@ -14,12 +15,12 @@ batch_size     = 256
 learn_rate     = 0.001
 momentum       = 0.9
 layer1_size    = 512
-layer2_size    = 256
+layer2_size    = 128
 layer1_dropout = 0.05
 layer2_dropout = 0.05
-layer1_l2      = 0.0001
-layer2_l2      = 0.001
-iterations     = 50
+layer1_l2      = 0.01
+layer2_l2      = 0.01
+iterations     = 250
 
 # multiclass loss used for cross evaluation
 def MultiLogLoss(y_true, y_pred, eps = 1e-15):
@@ -157,8 +158,8 @@ def kayak_mlp(X, y):
         plot_loss[epoch, 1] = total_loss
         print epoch, total_loss
 
-    #pyplot.plot(plot_loss[:,0], plot_loss[:,1], linewidth=2.0)
-    #pyplot.show()
+    pyplot.plot(plot_loss[:,0], plot_loss[:,1], linewidth=2.0)
+    pyplot.show()
         
     def compute_predictions(x):
         X.data = x
@@ -185,16 +186,41 @@ def main():
     print test.shape
 
     # scale features
-    scaler = StandardScaler()
-    scaler.fit(np.vstack((train.astype(float),test.astype(float))))
-    train = scaler.transform(train.astype(float))
-    test = scaler.transform(test.astype(float))
+    #scaler = StandardScaler()
+    #scaler.fit(np.vstack((train.astype(float),test.astype(float))))
+    #train = scaler.transform(train.astype(float))
+    #test = scaler.transform(test.astype(float))
+    
+    # transform counts to TFIDF features
+    tfidf = feature_extraction.text.TfidfTransformer()
+    train = tfidf.fit_transform(train).toarray()
+    test = tfidf.transform(test).toarray()
+    
+    # generate and add clustering features
+    #kmean = KMeans(n_clusters = 6, verbose = 1)
+    #clusters6 = kmean.fit_transform(train)
+    #clusters6_test = kmean.transform(test)
+    #clusters6 /= np.amax(clusters6)
+
+    #kmean = KMeans(n_clusters = 9, verbose = 1)
+    #clusters9 = kmean.fit_transform(train)
+    #clusters9_test = kmean.transform(test)
+    #clusters9 /= np.amax(clusters9)
+
+    #kmean = KMeans(n_clusters = 12, verbose = 1)
+    #clusters12 = kmean.fit_transform(train)
+    #clusters12_test = kmean.transform(test)
+    #clusters12 /= np.amax(clusters12)
+
+    #train = np.hstack((train, clusters6, clusters9, clusters12))
+    #test = np.hstack((test, clusters6_test, clusters9_test, clusters12_test))
     
     # encode labels 
     lbl_enc = preprocessing.LabelBinarizer()
     labels = lbl_enc.fit_transform(labels)
     
     train, labels = shuffle(train, labels)
+    print np.amax(train)
     
     # split dataset for cross eval if we are doing it
     x_train, x_test, y_train, y_test = train_test_split(train, labels)

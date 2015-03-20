@@ -160,10 +160,15 @@ def main():
     print test.shape
 
     # scale features
-    scaler = StandardScaler()
+    #scaler = StandardScaler()
     #scaler.fit(np.vstack((train,test)))
-    train = scaler.fit_transform(train.astype(float))
-    test = scaler.transform(test.astype(float))
+    #train = scaler.fit_transform(train.astype(float))
+    #test = scaler.transform(test.astype(float))
+    
+    # transform counts to TFIDF features
+    tfidf = feature_extraction.text.TfidfTransformer()
+    train = tfidf.fit_transform(train).toarray()
+    test = tfidf.transform(test).toarray()
     
     # encode labels 
     lbl_enc = preprocessing.LabelBinarizer()
