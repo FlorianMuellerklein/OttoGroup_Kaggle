@@ -10,10 +10,13 @@ xgboost = xgboost.drop('id', axis=1)
 graphlab = pd.read_csv('Preds/graphlab_submission.csv')
 graphlab = graphlab.drop('id', axis=1)
 
+mlp = pd.read_csv('Preds/kayak_logistic_mlp_preds.csv')
+mlp = mlp.drop('id', axis=1)
+
 sample = pd.read_csv('Data/sampleSubmission.csv')
 
-avg = dbn.values + xgboost.values + graphlab.values / 3.0
+avg = dbn.values + xgboost.values + graphlab.values + mlp.values / 4.0
 
 # ----------------------  create submission file  -----------------------------
 avg = pd.DataFrame(avg, index=sample.id.values, columns=sample.columns[1:])
-avg.to_csv('Preds/avg_dbn_xgboost_gl.csv', index_label='id')
+avg.to_csv('Preds/avg_dbn_xgboost_gl_mlp.csv', index_label='id')
