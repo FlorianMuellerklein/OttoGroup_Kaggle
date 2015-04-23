@@ -1,14 +1,8 @@
 require(xgboost)
 require(methods)
 
-LogLoss <- function(actual, predicted, eps=1e-15) {
-  predicted[predicted < eps] <- eps;
-  predicted[predicted > 1 - eps] <- 1 - eps;
-  -1/nrow(actual)*(sum(actual*log(predicted)))
-}
-
-train = read.csv('Data/train.csv',header=TRUE,stringsAsFactors = F)
-test = read.csv('Data/test.csv',header=TRUE,stringsAsFactors = F)
+train = read.csv('data/train_tfidf.csv',header=TRUE,stringsAsFactors = F)
+test = read.csv('data/test_tfidf.csv',header=TRUE,stringsAsFactors = F)
 train = train[,-1]
 test = test[,-1]
 
@@ -23,23 +17,35 @@ trind = 1:length(y)
 teind = (nrow(train)+1):nrow(x)
 
 # Set necessary parameter
+#param <- list("objective" = "multi:softprob",
+#              "eval_metric" = "mlogloss",
+#			  "eta" = 0.05,
+#			  "min_child_weight" = 6,
+#			  "max_depth" = 18,
+#              "num_class" = 9,
+#              "nthread" = 8)
+
+# graphlab params from kaggle forums  
 param <- list("objective" = "multi:softprob",
-              #"eval_metric" = "mlogloss",
-			  max.depth = 10,
-              "num_class" = 9,
-              "nthread" = 8)
-			  
-# split training data into train and test
-indices = sample(1:nrow(data), nrow(data)*.2)
+		"eval_metric" = "mlogloss",
+		"eta" = 0.05,
+		"max_depth" = 10,
+		"min_child_weight" = 4,
+		"subsample" = .8,
+		"min_loss_reduction" = 1,
+		"colsample_bytree" = .7,
+		"num_class" = 9)
+		#"booster" = 'gblinear')
+
 
 # Run Cross Valication
-cv.nround = 50
-bst.cv = xgb.cv(param=param, data = x[trind,], label = y, 
-                nfold = 3, nrounds=cv.nround)
+cv.nround = 700
+xgb.cv(param = param, data = x[trind,], label = y, 
+                nfold = 3, nrounds = cv.nround)
 
 # Train the model
-nround = 200
-bst = xgboost(param=param, data = x[trind,], label = y, nrounds=nround)
+nround = 500
+bst = xgboost(param = param, data = x[trind,], label = y, nrounds = nround)
 
 # Make prediction
 pred = predict(bst,x[teind,])
@@ -50,4 +56,4 @@ pred = t(pred)
 pred = format(pred, digits=2,scientific=F) # shrink the size of submission
 pred = data.frame(1:nrow(pred),pred)
 names(pred) = c('id', paste0('Class_',1:9))
-write.csv(pred,file='Preds/xgboost_depth10.csv', quote=FALSE,row.names=FALSE)
+write.csv(pred,file='Preds/xgboost_tuned_softprob_tfidf_datoparams.csv', quote=FALSE,row.names=FALSE)
